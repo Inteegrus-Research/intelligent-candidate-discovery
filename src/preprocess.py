@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Phase 1: Normalize raw dataset into clean, fast-loading Parquet artifacts.
-No embeddings yet – that's Phase 4.
+Phase 1 (Final): Normalize raw dataset into clean, compact, feature‑ready artifacts.
+Fixes: days_since_signup, missing flags, profile consistency, text size.
 """
 import argparse, gzip, json, re
 from collections import Counter
@@ -19,7 +19,6 @@ SERVICE_COMPANIES = {
     "deloitte", "pwc", "ey", "kpmg"
 }
 
-# Skill canonicalization map
 SKILL_CANON = {
     "sentence transformers": "sentence-transformers",
     "sentence-transformer": "sentence-transformers",
@@ -67,6 +66,17 @@ def load_docx_text(path):
             if any(cells):
                 parts.append(" ".join(cells))
     return "\n".join(parts)
+
+def compress_career_description(desc, max_chars=150):
+    """Keep only the first sentence or up to max_chars to reduce text size."""
+    if not desc:
+        return ""
+    desc = desc.strip()
+    # take first sentence (up to period, or fallback to first max_chars)
+    first_sent = re.split(r'(?<=[.!?])\s+', desc)[0]
+    if len(first_sent) > max_chars:
+        return first_sent[:max_chars] + "..."
+    return first_sent
 
 # ----- MAIN -----
 def main():
@@ -128,34 +138,43 @@ def main():
         career = c.get("career_history", [])
         career_months = 0
         service_count = 0
+        career_titles = []  # for consistency check
         for r in career:
             dur = int(r.get("duration_months", 0) or 0)
             career_months += dur
             comp = clean_text(r.get("company", ""))
             if any(sc in comp for sc in SERVICE_COMPANIES):
                 service_count += 1
+            career_titles.append(clean_text(r.get("title", "")))
 
         yoe = float(p.get("years_of_experience", 0) or 0)
         career_years = round(career_months / 12.0, 2)
+        current_title_clean = clean_text(p.get("current_title", ""))
 
-        # Build text docs (will be used for embeddings later)
+        # Profile consistency: simple title match with career history titles
+        title_match_count = sum(1 for t in career_titles if t == current_title_clean)
+        title_career_match_ratio = title_match_count / len(career_titles) if career_titles else 0.0
+
+        # Build compressed text docs for embeddings (lightweight)
         profile_doc = clean_text(f"{p.get('headline','')}. {p.get('summary','')}")
-        skills_doc = " ; ".join(
-            f"{s['name']} ({s['proficiency']}) end={s['endorsements']} dur={s['duration_months']}mo"
-            for s in norm_skills
-        )
-        career_doc = " ; ".join(
-            f"{clean_text(r.get('title',''))} at {clean_text(r.get('company',''))}: {clean_text(r.get('description',''))}"
-            for r in career
-        )
-        full_doc = f"{profile_doc} {skills_doc} {career_doc}"
+        # Skills doc: only skill names, not all details (to save space)
+        skills_doc_compact = ", ".join(s["name"] for s in norm_skills)
+        # Career doc: keep title, company, and compressed description
+        career_parts = []
+        for r in career:
+            title = clean_text(r.get("title", ""))
+            company = clean_text(r.get("company", ""))
+            desc = compress_career_description(r.get("description", ""))
+            career_parts.append(f"{title} at {company}: {desc}")
+        career_doc_compact = " ; ".join(career_parts)
+        full_doc = f"{profile_doc}. Skills: {skills_doc_compact}. {career_doc_compact}"
 
         # ----- METADATA -----
         meta_rows.append({
             "candidate_id": cid,
             "anonymized_name": clean_text(p.get("anonymized_name","")),
             "headline": clean_text(p.get("headline","")),
-            "current_title": clean_text(p.get("current_title","")),
+            "current_title": current_title_clean,
             "current_company": clean_text(p.get("current_company","")),
             "current_industry": clean_text(p.get("current_industry","")),
             "location": clean_text(p.get("location","")),
@@ -183,9 +202,10 @@ def main():
             "career_history_count": len(career),
             "education_count": len(c.get("education", [])),
             "skills_count": len(norm_skills),
+            "title_career_match_ratio": title_career_match_ratio,  # new consistency measure
         })
 
-        # ----- FEATURES (Phase 5 ready) -----
+        # ----- FEATURES (Phase 5 ready, with missing flags) -----
         advanced_cnt = sum(1 for s in norm_skills if s["proficiency"] in ("advanced", "expert"))
         expert_cnt = sum(1 for s in norm_skills if s["proficiency"] == "expert")
         weighted_skill = 0.0
@@ -194,17 +214,23 @@ def main():
             ps = prof_map.get(s["proficiency"], 0.0)
             weighted_skill += ps * np.log1p(s["endorsements"]) * np.log1p(s["duration_months"])
 
+        github_val = float(sig.get("github_activity_score", -1) or -1)
+        offer_acc = float(sig.get("offer_acceptance_rate", -1) or -1)
+
         feat_rows.append({
             "candidate_id": cid,
             "yoe": yoe,
             "career_years_from_history": career_years,
             "days_since_active": days_ago(last_active, today),
+            "days_since_signup": days_ago(signup, today),         # now present
             "notice_period_days": int(sig.get("notice_period_days", 90) or 90),
             "profile_completeness": float(sig.get("profile_completeness_score", 0) or 0),
             "response_rate": float(sig.get("recruiter_response_rate", 0) or 0),
             "interview_completion": float(sig.get("interview_completion_rate", 0) or 0),
-            "offer_acceptance": float(sig.get("offer_acceptance_rate", -1) or -1),
-            "github_activity": float(sig.get("github_activity_score", -1) or -1),
+            "offer_acceptance": offer_acc,
+            "offer_acceptance_missing": 1 if offer_acc == -1 else 0,  # missing flag
+            "github_activity": github_val,
+            "github_activity_missing": 1 if github_val == -1 else 0,  # missing flag
             "connection_count": int(sig.get("connection_count", 0) or 0),
             "endorsements_received": int(sig.get("endorsements_received", 0) or 0),
             "views_received_30d": int(sig.get("profile_views_received_30d", 0) or 0),
@@ -222,14 +248,15 @@ def main():
             "service_company_ratio": service_count / len(career) if career else 0.0,
             "skills_count": len(norm_skills),
             "career_count": len(career),
+            "title_career_match_ratio": title_career_match_ratio,  # consistency feature
         })
 
         text_rows.append({
             "candidate_id": cid,
             "profile_doc": profile_doc,
-            "skills_doc": skills_doc,
-            "career_doc": career_doc,
-            "full_doc": full_doc,
+            "skills_doc": skills_doc_compact,      # compact skill list
+            "career_doc": career_doc_compact,      # compressed career descriptions
+            "full_doc": full_doc,                  # shorter full text
         })
 
     f.close()
@@ -239,10 +266,11 @@ def main():
     pd.DataFrame(meta_rows).to_parquet(outdir / "candidate_metadata.parquet", index=False)
     pd.DataFrame(feat_rows).to_parquet(outdir / "candidate_features.parquet", index=False)
     td = pd.DataFrame(text_rows)
-    td["jd_text"] = jd_text   # attach cleaned JD for convenience
+    td["jd_text"] = jd_text   # attach cleaned JD
     td.to_parquet(outdir / "candidate_text.parquet", index=False)
 
-    print(f"✅ Phase 1 complete. Artifacts saved to {outdir}")
+    print(f"✅ Phase 1 (final) complete. Artifacts saved to {outdir}")
+    print(f"Features columns: {list(pd.DataFrame(feat_rows).columns)}")
 
 if __name__ == "__main__":
     main()
