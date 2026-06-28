@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-Phase 7: score and rerank candidates.
+Rank candidates using a two‑stage retrieval + rerank pipeline.
 
 Inputs:
-- data/artifacts/candidate_features_phase6.parquet
+- data/artifacts/candidate_features_with_consistency.parquet
 
 Outputs:
-- data/artifacts/top1000_candidates.parquet
-- data/artifacts/scored_candidates.parquet
+- data/artifacts/retrieval_top1000.parquet
+- data/artifacts/candidate_scores.parquet
 """
 
 from __future__ import annotations
@@ -109,7 +109,6 @@ def normalize_group(df: pd.DataFrame, cols: list[str], invert: set[str] | None =
             continue
 
         x = df[c].copy()
-
         if c in {
             "connection_count",
             "endorsements_received",
@@ -124,10 +123,8 @@ def normalize_group(df: pd.DataFrame, cols: list[str], invert: set[str] | None =
             x = robust_clip(x)
 
         x = minmax_01(x)
-
         if c in invert:
             x = 1.0 - x
-
         out[c] = x
 
     return pd.DataFrame(out, index=df.index)
@@ -220,9 +217,9 @@ def compute_final_score(df: pd.DataFrame) -> pd.Series:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--features", default="data/artifacts/candidate_features_phase6.parquet")
-    ap.add_argument("--out-top1000", default="data/artifacts/top1000_candidates.parquet")
-    ap.add_argument("--out-scored", default="data/artifacts/scored_candidates.parquet")
+    ap.add_argument("--features", default="data/artifacts/candidate_features_with_consistency.parquet")
+    ap.add_argument("--out-top1000", default="data/artifacts/retrieval_top1000.parquet")
+    ap.add_argument("--out-scored", default="data/artifacts/candidate_scores.parquet")
     args = ap.parse_args()
 
     df = pd.read_parquet(args.features).copy()
@@ -242,9 +239,8 @@ def main():
     ]
     missing = [c for c in required if c not in df.columns]
     if missing:
-        raise ValueError(f"Missing required columns for Phase 7: {missing}")
+        raise ValueError(f"Missing required columns: {missing}")
 
-    # Retrieval stage
     df["retrieval_score"] = compute_retrieval_score(df)
 
     n = len(df)
@@ -259,7 +255,6 @@ def main():
         kind="mergesort",
     ).reset_index(drop=True)
 
-    # Rerank only the retrieved pool
     top_df["final_score"] = compute_final_score(top_df)
 
     top_df = top_df.sort_values(
@@ -268,7 +263,6 @@ def main():
         kind="mergesort",
     ).reset_index(drop=True)
 
-    # Save top-1000 and full scored pool
     top_df.to_parquet(args.out_top1000, index=False)
 
     full_scored = df.copy()
@@ -277,14 +271,11 @@ def main():
     full_scored["final_score"] = full_scored["candidate_id"].astype(str).map(final_map)
     full_scored.to_parquet(args.out_scored, index=False)
 
-    print("Phase 7 complete.")
+    print("Ranking complete.")
     print(f"Saved: {args.out_top1000}")
     print(f"Saved: {args.out_scored}")
-    print(
-        top_df[
-            ["candidate_id", "retrieval_score", "final_score", "product_company_ratio", "honeypot_penalty", "consistency_score"]
-        ].head(10).to_string(index=False)
-    )
+    print(top_df[["candidate_id", "retrieval_score", "final_score", "product_company_ratio", "honeypot_penalty", "consistency_score"]]
+          .head(10).to_string(index=False))
 
 
 if __name__ == "__main__":

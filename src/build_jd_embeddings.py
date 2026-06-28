@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """
-Phase 3: Build 5 JD intent embeddings and save artifacts.
+Build 5 JD intent embeddings and save artifacts.
+
+Inputs:
+- data/raw/job_description.docx
+
 Outputs:
 - data/artifacts/jd_intents.parquet
 - data/artifacts/jd_intent_embeddings.npy
@@ -49,11 +53,9 @@ def main():
     jd_text = clean_text(jd_raw)
 
     intents = build_jd_intents(jd_text)
-
     intent_names = list(intents.keys())
     intent_texts = [intents[k] for k in intent_names]
 
-    # Save text artifact
     df = pd.DataFrame({
         "intent_name": intent_names,
         "intent_text": intent_texts,
@@ -62,15 +64,13 @@ def main():
     })
     df.to_parquet(outdir / "jd_intents.parquet", index=False)
 
-    # Save embeddings
     emb = embed_texts(intent_texts, model_name=args.model, batch_size=8, normalize=True)
     np.save(outdir / "jd_intent_embeddings.npy", emb)
 
-    # Save names for downstream code
     with open(outdir / "jd_intent_names.json", "w", encoding="utf-8") as f:
         json.dump(intent_names, f, indent=2)
 
-    print("Phase 3 complete.")
+    print("JD embeddings built successfully.")
     print(f"Saved: {outdir / 'jd_intents.parquet'}")
     print(f"Saved: {outdir / 'jd_intent_embeddings.npy'}")
     print(f"Saved: {outdir / 'jd_intent_names.json'}")

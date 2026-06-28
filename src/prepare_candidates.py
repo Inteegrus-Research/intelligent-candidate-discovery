@@ -1,18 +1,27 @@
 #!/usr/bin/env python3
 """
-Phase 1 (Final): Normalize raw dataset into clean, compact, feature‑ready artifacts.
-Fixes: days_since_signup, missing flags, profile consistency, text size.
+Prepare raw candidates and JD into clean, compact artifacts.
+
+Inputs:
+- data/raw/candidates.jsonl (or .jsonl.gz)
+- data/raw/job_description.docx
+
+Outputs:
+- data/artifacts/candidate_ids.npy
+- data/artifacts/candidate_metadata.parquet
+- data/artifacts/candidate_preliminary_features.parquet
+- data/artifacts/candidate_text.parquet
 """
+
 import argparse, gzip, json, re
-from collections import Counter
 from datetime import date, datetime
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from docx import Document
 from tqdm import tqdm
 
-# ----- CONSTANTS -----
 SERVICE_COMPANIES = {
     "tcs", "infosys", "wipro", "accenture", "cognizant", "capgemini",
     "mindtree", "hcl", "tech mahindra", "ltimindtree", "l&t infotech",
@@ -37,17 +46,19 @@ SKILL_CANON = {
 }
 
 def parse_date(s):
-    if not s: return None
+    if not s:
+        return None
     try:
         return datetime.strptime(str(s), "%Y-%m-%d").date()
-    except:
+    except Exception:
         return None
 
 def days_ago(d, today):
     return (today - d).days if d else None
 
 def clean_text(x):
-    if not x: return ""
+    if not x:
+        return ""
     x = str(x).strip().lower()
     x = re.sub(r"\s+", " ", x)
     return x
@@ -68,17 +79,14 @@ def load_docx_text(path):
     return "\n".join(parts)
 
 def compress_career_description(desc, max_chars=150):
-    """Keep only the first sentence or up to max_chars to reduce text size."""
     if not desc:
         return ""
     desc = desc.strip()
-    # take first sentence (up to period, or fallback to first max_chars)
     first_sent = re.split(r'(?<=[.!?])\s+', desc)[0]
     if len(first_sent) > max_chars:
         return first_sent[:max_chars] + "..."
     return first_sent
 
-# ----- MAIN -----
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default="data/raw/candidates.jsonl")
@@ -93,14 +101,10 @@ def main():
     outdir.mkdir(parents=True, exist_ok=True)
 
     today = datetime.strptime(args.as_of, "%Y-%m-%d").date()
-    print(f"Normalizing dates relative to: {today}")
 
-    # Load JD text
     jd_raw = load_docx_text(jd_path)
     jd_text = clean_text(jd_raw)
-    print(f"JD loaded: {len(jd_text)} chars after cleaning")
 
-    # Load candidates
     if str(data_path).endswith(".gz"):
         f = gzip.open(data_path, "rt", encoding="utf-8")
     else:
@@ -119,11 +123,9 @@ def main():
         p = c["profile"]
         sig = c["redrob_signals"]
 
-        # Parse dates
         signup = parse_date(sig.get("signup_date"))
         last_active = parse_date(sig.get("last_active_date"))
 
-        # Normalize skills
         skills = c.get("skills", [])
         norm_skills = []
         for s in skills:
@@ -134,11 +136,10 @@ def main():
                 "duration_months": int(s.get("duration_months", 0) or 0),
             })
 
-        # Career history
         career = c.get("career_history", [])
         career_months = 0
         service_count = 0
-        career_titles = []  # for consistency check
+        career_titles = []
         for r in career:
             dur = int(r.get("duration_months", 0) or 0)
             career_months += dur
@@ -151,15 +152,11 @@ def main():
         career_years = round(career_months / 12.0, 2)
         current_title_clean = clean_text(p.get("current_title", ""))
 
-        # Profile consistency: simple title match with career history titles
         title_match_count = sum(1 for t in career_titles if t == current_title_clean)
         title_career_match_ratio = title_match_count / len(career_titles) if career_titles else 0.0
 
-        # Build compressed text docs for embeddings (lightweight)
         profile_doc = clean_text(f"{p.get('headline','')}. {p.get('summary','')}")
-        # Skills doc: only skill names, not all details (to save space)
         skills_doc_compact = ", ".join(s["name"] for s in norm_skills)
-        # Career doc: keep title, company, and compressed description
         career_parts = []
         for r in career:
             title = clean_text(r.get("title", ""))
@@ -169,7 +166,6 @@ def main():
         career_doc_compact = " ; ".join(career_parts)
         full_doc = f"{profile_doc}. Skills: {skills_doc_compact}. {career_doc_compact}"
 
-        # ----- METADATA -----
         meta_rows.append({
             "candidate_id": cid,
             "anonymized_name": clean_text(p.get("anonymized_name","")),
@@ -202,10 +198,9 @@ def main():
             "career_history_count": len(career),
             "education_count": len(c.get("education", [])),
             "skills_count": len(norm_skills),
-            "title_career_match_ratio": title_career_match_ratio,  # new consistency measure
+            "title_career_match_ratio": title_career_match_ratio,
         })
 
-        # ----- FEATURES (Phase 5 ready, with missing flags) -----
         advanced_cnt = sum(1 for s in norm_skills if s["proficiency"] in ("advanced", "expert"))
         expert_cnt = sum(1 for s in norm_skills if s["proficiency"] == "expert")
         weighted_skill = 0.0
@@ -222,15 +217,15 @@ def main():
             "yoe": yoe,
             "career_years_from_history": career_years,
             "days_since_active": days_ago(last_active, today),
-            "days_since_signup": days_ago(signup, today),         # now present
+            "days_since_signup": days_ago(signup, today),
             "notice_period_days": int(sig.get("notice_period_days", 90) or 90),
             "profile_completeness": float(sig.get("profile_completeness_score", 0) or 0),
             "response_rate": float(sig.get("recruiter_response_rate", 0) or 0),
             "interview_completion": float(sig.get("interview_completion_rate", 0) or 0),
             "offer_acceptance": offer_acc,
-            "offer_acceptance_missing": 1 if offer_acc == -1 else 0,  # missing flag
+            "offer_acceptance_missing": 1 if offer_acc == -1 else 0,
             "github_activity": github_val,
-            "github_activity_missing": 1 if github_val == -1 else 0,  # missing flag
+            "github_activity_missing": 1 if github_val == -1 else 0,
             "connection_count": int(sig.get("connection_count", 0) or 0),
             "endorsements_received": int(sig.get("endorsements_received", 0) or 0),
             "views_received_30d": int(sig.get("profile_views_received_30d", 0) or 0),
@@ -248,29 +243,28 @@ def main():
             "service_company_ratio": service_count / len(career) if career else 0.0,
             "skills_count": len(norm_skills),
             "career_count": len(career),
-            "title_career_match_ratio": title_career_match_ratio,  # consistency feature
+            "title_career_match_ratio": title_career_match_ratio,
         })
 
         text_rows.append({
             "candidate_id": cid,
             "profile_doc": profile_doc,
-            "skills_doc": skills_doc_compact,      # compact skill list
-            "career_doc": career_doc_compact,      # compressed career descriptions
-            "full_doc": full_doc,                  # shorter full text
+            "skills_doc": skills_doc_compact,
+            "career_doc": career_doc_compact,
+            "full_doc": full_doc,
         })
 
     f.close()
 
-    # Save artifacts
     np.save(outdir / "candidate_ids.npy", np.array(ids, dtype=object))
     pd.DataFrame(meta_rows).to_parquet(outdir / "candidate_metadata.parquet", index=False)
-    pd.DataFrame(feat_rows).to_parquet(outdir / "candidate_features.parquet", index=False)
+    pd.DataFrame(feat_rows).to_parquet(outdir / "candidate_preliminary_features.parquet", index=False)
+
     td = pd.DataFrame(text_rows)
-    td["jd_text"] = jd_text   # attach cleaned JD
+    td["jd_text"] = jd_text
     td.to_parquet(outdir / "candidate_text.parquet", index=False)
 
-    print(f"✅ Phase 1 (final) complete. Artifacts saved to {outdir}")
-    print(f"Features columns: {list(pd.DataFrame(feat_rows).columns)}")
+    print(f"Preparation complete. Artifacts saved to {outdir}")
 
 if __name__ == "__main__":
     main()

@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-Phase 6 (fixed correctly): build consistency scores using REAL skill details.
+Compute consistency scores using raw skill details.
 
 Inputs:
-- data/raw/candidates.jsonl   (or .jsonl.gz)
-- data/artifacts/candidate_features_phase5.parquet
+- data/raw/candidates.jsonl (or .jsonl.gz)
+- data/artifacts/candidate_features.parquet
 - data/artifacts/candidate_text.parquet
 - data/artifacts/candidate_metadata.parquet
 
 Outputs:
-- data/artifacts/candidate_consistency.parquet
-- data/artifacts/candidate_features_phase6.parquet
+- data/artifacts/candidate_consistency_scores.parquet
+- data/artifacts/candidate_features_with_consistency.parquet
 """
 
 import argparse
@@ -25,38 +25,18 @@ from scoring.consistency_engine import compute_consistency_score
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument(
-        "--raw",
-        default="data/raw/candidates.jsonl",
-        help="Raw candidates file (jsonl or jsonl.gz)",
-    )
-    ap.add_argument(
-        "--features",
-        default="data/artifacts/candidate_features_phase5.parquet",
-    )
-    ap.add_argument(
-        "--text",
-        default="data/artifacts/candidate_text.parquet",
-    )
-    ap.add_argument(
-        "--meta",
-        default="data/artifacts/candidate_metadata.parquet",
-    )
-    ap.add_argument(
-        "--out",
-        default="data/artifacts/candidate_consistency.parquet",
-    )
-    ap.add_argument(
-        "--merged-out",
-        default="data/artifacts/candidate_features_phase6.parquet",
-    )
+    ap.add_argument("--raw", default="data/raw/candidates.jsonl")
+    ap.add_argument("--features", default="data/artifacts/candidate_features.parquet")
+    ap.add_argument("--text", default="data/artifacts/candidate_text.parquet")
+    ap.add_argument("--meta", default="data/artifacts/candidate_metadata.parquet")
+    ap.add_argument("--out", default="data/artifacts/candidate_consistency_scores.parquet")
+    ap.add_argument("--merged-out", default="data/artifacts/candidate_features_with_consistency.parquet")
     args = ap.parse_args()
 
     feat = pd.read_parquet(args.features)
     txt = pd.read_parquet(args.text)[["candidate_id", "profile_doc", "career_doc"]]
     meta = pd.read_parquet(args.meta)[["candidate_id", "current_title"]]
 
-    # Load real raw skills once
     raw_path = Path(args.raw)
     if raw_path.suffix == ".gz":
         f = gzip.open(raw_path, "rt", encoding="utf-8")
@@ -99,7 +79,7 @@ def main():
     cons = pd.DataFrame(rows)
     cons.to_parquet(args.out, index=False)
 
-    # Remove old columns from Phase 5 before merging to avoid _x/_y collisions
+    # Remove old consistency columns from the feature table before merge
     feat = feat.drop(
         columns=[
             "consistency_score",
@@ -114,7 +94,7 @@ def main():
     merged = feat.merge(cons, on="candidate_id", how="left")
     merged.to_parquet(args.merged_out, index=False)
 
-    print("Phase 6 (fixed correctly) complete.")
+    print("Consistency features built.")
     print(f"Saved: {args.out}")
     print(f"Saved merged features: {args.merged_out}")
     print(merged[["consistency_score", "honeypot_penalty"]].describe())

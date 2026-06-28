@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 """
-Phase 4: Generate embeddings for candidate documents.
+Generate embeddings for candidate documents.
 
 Inputs:
 - data/artifacts/candidate_text.parquet
 
 Outputs:
-- data/artifacts/candidate_embeddings.npy
-    Shape: (N, 4, 384), float16
-    Order: [profile_doc, skills_doc, career_doc, full_doc]
+- data/artifacts/candidate_embeddings.npy  (N, 4, 384)
 - data/artifacts/candidate_embedding_names.json
 """
 
@@ -39,13 +37,12 @@ def main():
     outdir.mkdir(parents=True, exist_ok=True)
 
     df = pd.read_parquet(text_path)
-
     missing_cols = [c for c in DOC_COLUMNS if c not in df.columns]
     if missing_cols:
         raise ValueError(f"Missing required document columns: {missing_cols}")
 
     n = len(df)
-    d = 384  # all-MiniLM-L6-v2
+    d = 384
     all_embs = np.zeros((n, len(DOC_COLUMNS), d), dtype=np.float16)
 
     for j, col in enumerate(DOC_COLUMNS):
@@ -68,7 +65,7 @@ def main():
     with open(names_path, "w", encoding="utf-8") as f:
         json.dump(DOC_COLUMNS, f, indent=2)
 
-    print("Phase 4 complete.")
+    print("Candidate embeddings built.")
     print(f"Saved: {emb_path}")
     print(f"Saved: {names_path}")
     print("Embedding tensor shape:", all_embs.shape)
