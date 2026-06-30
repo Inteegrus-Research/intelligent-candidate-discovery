@@ -1,0 +1,77 @@
+{
+  "score_separation": {
+    "rank1": 0.8583669976820792,
+    "rank10": 0.7849168548885336,
+    "rank25": 0.7453335598034675,
+    "rank50": 0.7080943525197522,
+    "rank100": 0.6723732939339656,
+    "avg_consecutive_gap": 0.0018787242802839762,
+    "max_gap": 0.029420352797248972,
+    "min_gap": 3.1902951739271046e-06,
+    "score_range": 0.18599370374811364
+  },
+  "retrieval_alignment": {
+    "pearson": 0.7044,
+    "spearman": 0.6913
+  },
+  "consistency_alignment": {
+    "pearson": 0.4328,
+    "spearman": 0.5151
+  },
+  "diversity": {
+    "unique_companies": 39,
+    "unique_titles": 16,
+    "unique_locations": 0,
+    "most_common_company": "rephrase.ai",
+    "most_common_company_pct": 8.0
+  },
+  "lift": {
+    "pool_avg_score": 0.4848,
+    "top100_avg_score": 0.7213,
+    "lift_factor": 1.49
+  },
+  "feature_profile": {
+    "retrieval": {
+      "top100_avg": 0.9859,
+      "pool_avg": 0.9537
+    },
+    "consistency": {
+      "top100_avg": 0.8578,
+      "pool_avg": 0.8336
+    },
+    "product_ratio": {
+      "top100_avg": 1.0,
+      "pool_avg": 0.8478
+    },
+    "response": {
+      "top100_avg": 0.6454,
+      "pool_avg": 0.5268
+    },
+    "notice": {
+      "top100_avg": 62.85,
+      "pool_avg": 76.815
+    }
+  },
+  "robustness": {
+    "deterministic": true
+  },
+  "explainability": {
+    "coverage_pct": 100.0,
+    "avg_length_chars": 409.3,
+    "avg_words": 59.2
+  },
+  "ranking_quality_checklist": {
+    "checks": {
+      "monotonic_score": true,
+      "deterministic": true,
+      "diverse_companies": true,
+      "diverse_titles": true,
+      "explainable": true,
+      "lift_above_1.1": true,
+      "retrieval_correlation": false,
+      "score_separation_ok": true
+    },
+    "overall_passed": false,
+    "score": "7/8"
+  }
+}

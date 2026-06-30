@@ -1,0 +1,2 @@
+Rank 1 Score,Rank 100 Score,Avg Gap,Retrieval Spearman ρ,Consistency Spearman ρ,Unique Companies (Top 100),Unique Titles (Top 100),Lift Factor,Explainability Coverage,Overall Quality
+0.8583669976820792,0.6723732939339656,0.0018787242802839762,0.6913,0.5151,39,16,1.49,100.0,7/8 FAILED

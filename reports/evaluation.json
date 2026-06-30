@@ -1,0 +1,164 @@
+{
+  "dataset": {
+    "total_candidates": 100000,
+    "retrieved_pool_size": 1000,
+    "final_shortlist_size": 100,
+    "avg_years_of_experience": 7.17,
+    "median_years_of_experience": 6.8,
+    "unique_job_titles": 47,
+    "unique_companies": 63,
+    "open_to_work_pct": 35.3
+  },
+  "retrieval": {
+    "mean": 0.9536545061479343,
+    "std": 0.0241228441673862,
+    "min": 0.9179226953164424,
+    "p25": 0.9326016847017982,
+    "median": 0.9502790546647792,
+    "p75": 0.9736174247112646,
+    "max": 0.9999999999999999
+  },
+  "final_score": {
+    "mean": 0.4848021468070445,
+    "std": 0.11980858240986109,
+    "min": 0.26437860603781493,
+    "p25": 0.39432057184812463,
+    "median": 0.44863022073432146,
+    "p75": 0.5689354126628416,
+    "max": 0.8583669976820792
+  },
+  "ranking_quality": {
+    "top10_avg": 0.8108645352658771,
+    "top25_avg": 0.7844274755621085,
+    "top50_avg": 0.754496246824617,
+    "top100_avg": 0.7213343341158657,
+    "drop_1_to_10": 0.07345014279354567,
+    "drop_10_to_25": 0.039583295085066084,
+    "drop_25_to_50": 0.037239207283715325,
+    "drop_50_to_100": 0.03572105858578656,
+    "avg_consecutive_gap": 0.0018787242802839762,
+    "max_consecutive_gap": 0.029420352797248972,
+    "min_consecutive_gap": 3.1902951739271046e-06
+  },
+  "diversity": {
+    "unique_companies_in_top100": 39,
+    "unique_titles_in_top100": 16,
+    "most_represented_company": "rephrase.ai",
+    "most_represented_company_pct": 8.0
+  },
+  "candidate_quality": {
+    "consistency": {
+      "mean": 0.8336,
+      "median": 0.8414,
+      "min": 0.5561,
+      "max": 0.9982
+    },
+    "profile_completeness": {
+      "mean": 65.0626,
+      "median": 66.05,
+      "min": 25.0,
+      "max": 99.8
+    },
+    "product_ratio": {
+      "mean": 0.8478,
+      "median": 1.0,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "honeypot_penalty": {
+      "mean": 0.0144,
+      "median": 0.0,
+      "min": 0.0,
+      "max": 0.16
+    },
+    "semantic_retrieval": {
+      "mean": 0.9537,
+      "median": 0.9503,
+      "min": 0.9179,
+      "max": 1.0
+    }
+  },
+  "availability": {
+    "notice_period_days": {
+      "mean": 76.8,
+      "median": 60.0,
+      "pct_leq_30": 17.8,
+      "pct_leq_60": 51.0,
+      "pct_leq_90": 77.5
+    },
+    "open_to_work_pct": 52.4,
+    "avg_recruiter_response": 0.527,
+    "avg_interview_completion": 0.687
+  },
+  "integrity": {
+    "mean_penalty": 0.0144,
+    "max_penalty": 0.16,
+    "pct_with_penalty": 26.7,
+    "pct_penalty_above_01": 2.8
+  },
+  "explainability": {
+    "coverage_pct": 100.0,
+    "avg_length_chars": 409.3,
+    "max_length_chars": 526,
+    "min_length_chars": 344,
+    "avg_words": 59.2,
+    "contains_semantic_pct": 100.0,
+    "contains_consistency_pct": 0.0,
+    "contains_availability_pct": 100.0
+  },
+  "validation": {
+    "all_passed": true,
+    "checks": {
+      "row_count_100": true,
+      "unique_ids": true,
+      "no_duplicates": true,
+      "ranks_1_to_100": true,
+      "score_monotonic": true,
+      "reasoning_present": true,
+      "ids_in_top1000": true,
+      "score_in_range_0_1": true,
+      "no_empty_reasoning": true
+    }
+  },
+  "ranking_runtime_sec": 0.03,
+  "feature_group_contribution_ablation": {
+    "semantic": 0.4181485779101526,
+    "career": 0.30094693149399526,
+    "skill": 0.09934928668379485,
+    "behavioral": 0.073799309521846,
+    "availability": 0.05569359785500439,
+    "quality": 0.0520622965352069
+  },
+  "candidate_archetypes": {
+    "best": {
+      "candidate_id": "CAND_0039754",
+      "final_score": 0.8584,
+      "retrieval_score": 1.0,
+      "consistency_score": 0.7365,
+      "product_company_ratio": 1.0,
+      "honeypot_penalty": 0.0,
+      "notice_period_days": 30,
+      "response_rate": 0.81
+    },
+    "median": {
+      "candidate_id": "CAND_0064270",
+      "final_score": 0.7071,
+      "retrieval_score": 1.0,
+      "consistency_score": 0.8531,
+      "product_company_ratio": 1.0,
+      "honeypot_penalty": 0.0625,
+      "notice_period_days": 45,
+      "response_rate": 0.82
+    },
+    "lowest": {
+      "candidate_id": "CAND_0083307",
+      "final_score": 0.6724,
+      "retrieval_score": 0.9616,
+      "consistency_score": 0.8382,
+      "product_company_ratio": 1.0,
+      "honeypot_penalty": 0.04,
+      "notice_period_days": 120,
+      "response_rate": 0.7
+    }
+  }
+}

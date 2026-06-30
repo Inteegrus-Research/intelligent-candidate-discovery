@@ -1,0 +1,12 @@
+{
+  "total_candidates": 100000,
+  "retrieved": 1000,
+  "final_shortlist": 100,
+  "avg_final_score": 0.4848021468070445,
+  "avg_retrieval_score": 0.9536545061479343,
+  "avg_consistency": 0.8336,
+  "avg_notice_days": 76.8,
+  "open_to_work_pct": 52.4,
+  "ranking_runtime_sec": 0.03,
+  "validation": "PASS"
+}

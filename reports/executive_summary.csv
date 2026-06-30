@@ -1,0 +1,2 @@
+total_candidates,retrieved,final_shortlist,avg_final_score,avg_retrieval_score,avg_consistency,avg_notice_days,open_to_work_pct,ranking_runtime_sec,validation
+100000,1000,100,0.4848021468070445,0.9536545061479343,0.8336,76.8,52.4,0.03,PASS

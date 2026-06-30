@@ -1,0 +1,29 @@
+{
+  "runtime": {
+    "jd_embedding_load": 0.018749,
+    "candidate_embeddings_load": 0.042694,
+    "candidate_ids_load": 0.089964,
+    "top1000_features_load": 0.068719,
+    "semantic_retrieval": 3.354167,
+    "hybrid_ranking": 0.234076,
+    "submission_generation": 0.097068,
+    "total_online_pipeline": 3.9054
+  },
+  "resources": {
+    "throughput_candidates_per_sec": 4272.1,
+    "peak_memory_mb": 155.31,
+    "current_memory_mb": 8.96
+  },
+  "scalability": {
+    "total_candidates": 100000,
+    "retrieved_candidates": 1000,
+    "final_shortlist": 100,
+    "reduction_pct": 99.9
+  },
+  "environment": {
+    "cpu_cores": 1,
+    "gpu_required": false,
+    "ram_limit_gb": 16,
+    "disk_usage_submission_kb": 3.1
+  }
+}
