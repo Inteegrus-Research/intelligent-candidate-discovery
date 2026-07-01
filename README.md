@@ -202,6 +202,7 @@ python -m venv venv
 source venv/bin/activate  # Linux/Mac
 pip install -r requirements.txt
 ```
+Place the data/raw/canditates.jsonl and data/raw/job_description.docx in the desired location as per the repository structure mentioned below the pipeline execution section.
 
 ### Pipeline Execution
 
